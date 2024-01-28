@@ -21,7 +21,6 @@ pub const SQL_CREATE_ACT : &str =
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL, 
     added TEXT NOT NULL, 
-    isactive INTEGER NOT NULL DEFAULT 1, 
     hourstotal NUMERIC NOT NULL DEFAULT 0.0
     )";
 
@@ -49,7 +48,7 @@ struct DBOldRowActivities {
     group_id	: i32,		// disregarded for new db
     name		: String,
     added_when	: String,
-    is_activated : i32,
+    is_activated : i32,		// not needed anymore as well
     hours_total : f64,
 }
 
@@ -97,6 +96,8 @@ fn main()
     db_old = Connection::open_with_flags(
         &path, OpenFlags::SQLITE_OPEN_READ_ONLY
         ).unwrap();
+
+    db_old.execute("PRAGMA foreign_keys=OFF;", rusqlite::params![]).unwrap();
 
     println!("Opened {:?} read-only", path);
 
@@ -177,9 +178,16 @@ fn main()
      * iterate over old db data; history
      */
 
+    /*
+    let mut stmt = db_old
+        .prepare(&format!("SELECT * FROM history WHERE date >= '2024-01-22'"))
+        .unwrap();
+     */
+
     let mut stmt = db_old
         .prepare(&format!("SELECT * FROM history"))
         .unwrap();
+
 
     let iter = stmt.query_map([], |row| {
         Ok(DBOldRowHistory {
@@ -201,6 +209,7 @@ fn main()
      */
 
     let db_new = Connection::open(dbpath).unwrap();
+    db_new.execute("PRAGMA foreign_keys=OFF;", rusqlite::params![]).unwrap();
 
     /*
      * create tables in db (if db is new)
@@ -220,13 +229,12 @@ fn main()
     {
         db_new.execute(
                 "INSERT INTO tt_activities 
-                (id, name, added, isactive, hourstotal) 
-                VALUES (?1, ?2, ?3, ?4, ?5)",
+                (id, name, added, hourstotal) 
+                VALUES (?1, ?2, ?3, ?4)",
                 rusqlite::params![
                 	e.id,
                     e.name,
                     e.added_when,
-                    e.is_activated,
                     round6(e.hours_total),
                 ]).unwrap();
     }
@@ -260,6 +268,10 @@ fn main()
                 e.date,
             ]).unwrap();
     }
+
+
+    db_old.execute("PRAGMA foreign_keys=ON;", rusqlite::params![]).unwrap();
+    db_new.execute("PRAGMA foreign_keys=ON;", rusqlite::params![]).unwrap();
 
     println!("Done, if the program ran this far it worked");
 }

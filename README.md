@@ -3,7 +3,7 @@
 ## Description
 
 Short small one off application to transition db layouts from my previous
-timetracker (archived C++ version) to the new version (current Rust version).
+timetracker (archived C++ verison) to the new version (current Rust version).
 
 Doesn't have any special particular features. If you want to only pick data
 from a certain day forth from the old db to use in the new one, you can simply
